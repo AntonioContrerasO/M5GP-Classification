@@ -5,7 +5,7 @@ import numpy as np
 
 #load the data
 #dataset = pd.DataFrame(pd.read_csv("/home/treelab/python-codes/data/Concrete/train_10107_1.txt" ,sep='\s+', header=None))
-dataset = pd.DataFrame(pd.read_csv("/home/treelab/srbench1/pmlb/datasets5/589_fri_c2_1000_25/589_fri_c2_1000_25.tsv" ,sep='\s+', header=None))
+dataset = pd.DataFrame(pd.read_csv("/home/jose-nation/Proyectos/m5gp-main (Antonio)/dataTrain/train_10107_1.txt" ,sep='\s+', header=None))
 nrows = len(dataset.index)
 nvar = dataset.shape[1] - 1
 #print("Leyo X")
@@ -14,20 +14,19 @@ y = dataset.iloc[:nrows, nvar-1]
 
 x_train = dataset.iloc[0:nrows, 0:nvar-1].to_numpy().astype(np.float32)
 y_train = dataset.iloc[:nrows, nvar-1].to_numpy().astype(np.float32)
-
-
+ 
 #X_train, X_test, y_train, y_test = train_test_split(X,y,train_size=0.70,test_size=0.30,random_state=n)
 
-print('Running m5gp ...')
+print('Running m5gp ...')  
  
 est = m5gp(
-            generations=30, # number of generations (limited by default)
+            generations=2, # number of generations (limited by default)
             Individuals=256, # number of individuals
-            GenesIndividuals=128, # number of genes per individual
+            GenesIndividuals=256, # number of genes per individual
             mutationProb=0.1, # mutation rate probability
             mutationDeleteRateProb=0.01,  # mutation delete rate probality
             sizeTournament=0.15, # size of tournament
-            evaluationMethod=0,  #error evaluation method 
+            evaluationMethod=2,  #error evaluation method 
                         # 0=RMSE, 
                         # 1=R2, 
                         #cuML Methods
@@ -44,7 +43,7 @@ est = m5gp(
             genVariableProb=0.39, #probablity for generate variables 
             genConstantProb=0.1, #probablity for generate constants
             genNoopProb=0.01, #probablity for generate NOOP Operators 
-			useOpIF=False, #Set if use IF operator
+			useOpIF=0, #Set if use IF operator
             log=1, #save log files
 			verbose=1, #Show menssages on execution
             logPath='log/' #path for logs
@@ -64,3 +63,6 @@ yPredicted = est.predict(x_train)
 mse = est.meanSquaredError(y_train, yPredicted)
 print("mse: ", mse)
 print("rmse:", est.rmse(y_train, yPredicted))
+
+print(est.best_individual())
+print(est.complexity())

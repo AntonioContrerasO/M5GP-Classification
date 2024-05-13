@@ -1,10 +1,9 @@
 # *********************************************************************
 # Name: m5gpGlobals.py
 # Description: Modulo que implementa variables y metodos globales
-# para su uso comun en todos los modulos el sistema
+# para su uso comun en todos los modulos el sistema.
 # *********************************************************************
-
-
+ 
 import math
 import os
 from pickle import TRUE
@@ -31,8 +30,27 @@ from queue import LifoQueue
 import pycuda.driver as pycuda
 from pycuda.tools import make_default_context, DeviceMemoryPool, clear_context_caches
 
+VAR_INI = -1000
+OP_INI = -10000
+OP_ADD = -10001
+OP_SUB = -10002
+OP_MUL = -10003
+OP_DIV = -10004
+OP_SIN = -10005
+OP_COS = -10006
+OP_EXP = -10007
+OP_LOG = -10008
+OP_ABS = -10009
+OP_SUM = -10020 #Future use
+OP_PRD = -10021 #Future use
+OP_PRM = -10022 #Future use
+OP_DVS = -10023 #Future use
+OP_IFG = -10010
+OP_IFL = -10011
+OP_IFE = -10012
+OP_FIN = -11111
+OP_NOOP = -10099
 
-NOOP = -10013
 PI = 3.14159265
 
 MAX_R2_NEG  = -5000
@@ -47,7 +65,6 @@ global free_mem
 global sizeMemPopulation
 global sizeMemIndividuals 
 global sizeTournament
-
 
 def pycudasetup(gpu_device_number=0):
     try:
@@ -120,7 +137,7 @@ def bestIndividualInfo(config,
     for i in range(config.GenesIndividuals):
         gene = dInitialPopulation[indexBestIndividual_p * config.GenesIndividuals + i];
 
-        if (gene != NOOP) :
+        if (gene != OP_NOOP):
             BestIndividualLength =  BestIndividualLength + 1
         # if (gene == NOOP) :
         #     numOpNOOP = numOpNOOP + 1
@@ -189,9 +206,9 @@ def getIndividualExpr(config,
     for i in range(config.GenesIndividuals):
         gene = dInitialPopulation[indexBestIndividual_p * config.GenesIndividuals + i];
 
-        if (gene != NOOP) :
+        if (gene != OP_NOOP) :
             BestIndividualLength =  BestIndividualLength + 1
-        elif (gene == NOOP) :
+        elif (gene == OP_NOOP) :
             numOpNOOP = numOpNOOP + 1
         elif (gene == -10001) :
             numOps = numOps + 1
@@ -335,7 +352,7 @@ def getModelExpr(config, Model) :
             # End if
 
         # ********* Es un operador de seno, coseno, exponente, logaritmo y absoluto ************/
-        elif ((gene == -10005) or (gene == -10006) or (gene == -10007) or (gene == -10008) or (gene == -10009)) :
+        elif ((gene ==  OP_SIN) or (gene == OP_COS) or (gene == OP_EXP) or (gene == OP_LOG) or (gene == OP_ABS)) :
             if (not stackModel.empty()) :
                 tmp = stackModel.get()
                 strCont = tmp[0 : tmp.find(":")]
@@ -352,7 +369,8 @@ def getModelExpr(config, Model) :
                     stackModel.put(tmpExpr)
                 #end if
             # End if
-        elif (gene == NOOP) :  # Es NoOP, no hacemos nada
+                    
+        elif (gene == OP_NOOP) :  # Es NoOP, no hacemos nada
             if (not stackModel.empty()) :
                 g1 = 0
             # End if
@@ -446,7 +464,7 @@ def m4gpModel(config, Model, Coef, Intercep) :
                 tmpArr.append(gene)
                 stackModel.put(tmpArr)
             # End if
-        elif (gene == NOOP) :  # Es NoOP, no hacemos nada
+        elif (gene == OP_NOOP) :  # Es NoOP, no hacemos nada
             if (not stackModel.empty()) :
                 g1 = g1
             # End if
@@ -459,6 +477,80 @@ def m4gpModel(config, Model, Coef, Intercep) :
   
     #IndivLen:StackLen:ModelLen:ModelExpr
     return stackModel
+
+def m4gpModelClassification(config, Model) :
+    lenIndiv = 0
+    stackModel = LifoQueue()
+    m4gpModel = []
+    Expr = ""
+    tmpExpr = ""
+
+    maxVar = float((1000 + config.nvar -1) * (-1))
+
+    #print("maxvar:", maxVar)
+    lenModel = len(Model)
+    #print("getModelExpr. nvar:", config.nvar," Genes:",config.GenesIndividuals)
+    for i in range(lenModel):
+        gene = Model[i]
+        if (gene == -11111) :
+            break
+
+        geneExpr = getGeneExp(config, gene)
+        #print("GeneExpr (", i, "): ", gene, " - ", geneExpr)
+        lenIndiv += 1
+
+        # ********************************* Es una constante ************************************/
+        if ((gene >= MIN_CONSTANT) and (gene <= MAX_CONSTANT)) : # Es una constante
+            stackModel.put(gene)
+
+        # ********************************* Es una variable ************************************/
+        elif ((gene >= maxVar) and (gene <= -1000)) :  # Es una variable
+            stackModel.put(gene)
+
+        # ************ Es un operador de Suma,Resta,Division o Multiplicacion ******************/
+        elif ((gene == -10001) or (gene == -10002) or (gene == -10003) or (gene == -10004)) :
+            # Es Suma,Resta,Division o Multiplicacion
+            tmpArr = []
+            if (not stackModel.empty()) :
+                tmp = stackModel.get() #Obtenemos el ultimo elemento del stack
+                
+                if (not stackModel.empty()) :
+                    tmp2 = stackModel.get()
+                    
+                    tmpArr.append(tmp2)
+                    tmpArr.append(tmp)
+                    tmpArr.append(gene)
+
+                    stackModel.put(tmpArr)
+                else :
+                    stackModel.put(tmp)
+                # End if
+            # End if
+
+        # ********* Es un operador de seno, coseno, exponente, logaritmo y absoluto ************/
+        elif ((gene == -10005) or (gene == -10006) or (gene == -10007) or (gene == -10008) or (gene == -10009)) :
+            tmpArr = []
+            if (not stackModel.empty()) :
+                tmp = stackModel.get()
+                tmpArr.append(tmp)
+                tmpArr.append(gene)
+                stackModel.put(tmpArr)
+            # End if
+        elif (gene == OP_NOOP) :  # Es NoOP, no hacemos nada
+            if (not stackModel.empty()) :
+                g1 = g1
+            # End if
+        else :
+            g1 = gene
+        # End if
+    # End for (individuals)
+
+    stackLen = stackModel.qsize()
+  
+    #IndivLen:StackLen:ModelLen:ModelExpr
+    return stackModel
+
+
 
 def m4gpBuildExpr(tmp1, nvoModel) :
     if isinstance(tmp1, list):

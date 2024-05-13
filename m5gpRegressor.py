@@ -1,6 +1,7 @@
+
 from .src.m5gp import m5gp
 import pandas as pd
-
+ 
 hyper_params = [
         {
             'generations' : (30,),
@@ -51,7 +52,7 @@ hyper_params = [
             'mutationProb' : (0.1,),
             'sizeTournament' : (0.15,),
         },                                  
-        ]
+    ]
 
 # Create the pipeline for the model
 print('Running m5gp ...')
@@ -79,7 +80,7 @@ est = m5gp.m5gpRegressor(
             genVariableProb=0.39, #probablity for generate variables 
             genConstantProb=0.1, #probablity for generate constants
             genNoopProb=0.01, #probablity for generate NOOP Operators 
-			useOpIF=False, #Set if use IF operator
+			useOpIF=0, #Set to '1' if use IF operator
             log=1, #save log files
 			verbose=1, #Show menssages on execution
             logPath='log/' #path for logs

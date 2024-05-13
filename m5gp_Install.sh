@@ -13,4 +13,4 @@ git clone https://github.com/armandocardenasf/m5gp.git
 
 cd m5gp
 
-echo "****** m5gp Installed******"
+echo "****** m5gp Installed******" 

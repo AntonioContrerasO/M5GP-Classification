@@ -615,19 +615,19 @@ class m5gpClassifier(BaseEstimator):
       Número de divisiones para la validación cruzada.
   """
   def __init__(self, 
-            generations=50, 
-            Individuals=500, 
+            generations=7, 
+            Individuals=32, 
             GenesIndividuals=1024, 
-            mutationProb=0.15, 
+            mutationProb=0.1, 
             mutationDeleteRateProb=0.01,  
-            evaluationMethod=0, 
+            evaluationMethod=2, 
             scorer=0,  
-            sizeTournament=0.20, 
-            maxRandomConstant=5, 
-            genOperatorProb=0.54, 
-            genVariableProb=0.35, 
-            genConstantProb=0.10, 
-            genNoopProb=0.001,  
+            sizeTournament=0.15, 
+            maxRandomConstant=999, 
+            genOperatorProb=0.50, 
+            genVariableProb=0.39, 
+            genConstantProb=0.1, 
+            genNoopProb=0.01,  
             useOpIF=0,   
             log=1, 
             verbose=1, 
@@ -636,6 +636,7 @@ class m5gpClassifier(BaseEstimator):
             crossVal = True,
             k = 5 ,
             averageMode = "macro",
+            CrossAverage = False,
             params=None,
             **kwargs):
 
@@ -669,6 +670,7 @@ class m5gpClassifier(BaseEstimator):
     self.k = k
     self.averageMode = averageMode
     self.params = None
+    self.CrossAverage = CrossAverage
     # if params == None:
     #   self.params = gpCuM.validateParameters(kwargs, self.evaluationMethod)
     # else : 
@@ -708,6 +710,7 @@ class m5gpClassifier(BaseEstimator):
  
     print("Executing Fit - Method(", self.evaluationMethod ,") - ", gpCuM.cuGetMethodNameClassification(self), " Scorer:", self.scorer)
     print("nRows:", self.nrowTrain, "nVars:", self.nvar)
+    print(self.GenesIndividuals)
 
     # Store the size in bytes for initial population
     gpG.sizeMemPopulation = self.Individuals * self.GenesIndividuals 

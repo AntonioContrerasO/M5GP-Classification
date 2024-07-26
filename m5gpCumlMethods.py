@@ -389,7 +389,7 @@ def getDefaultParams(evaluationMethod):
                 "C": 1.0,  # Default value
                 "fit_intercept": True,  # Default value
                 "class_weight": None,  # Default value
-                "max_iter": 20000,  # Default value
+                "max_iter": 5000,  # Default value
                 "linesearch_max_iter": 50,  # Default value
                 "verbose": False,  # Default value
                 "l1_ratio": None,  # Default value
@@ -415,7 +415,7 @@ def getDefaultParams(evaluationMethod):
 
     elif evaluationMethod == 2:
         defaultParams = {
-                "n_estimators": 100,  # Default value
+                "n_estimators": 200,  # Default value
                 "split_criterion": 0,  # Default value
                 "bootstrap": True,  # Default value
                 "max_samples": 1.0,  # Default value
@@ -496,7 +496,8 @@ def createCumlMethodClassification(evaluationMethod, params=None):
         slr = MBSGDClassifier()
     return slr
 
-def ExecCumlClassification(nProc, hFit,  st, evaluationMethod, indiv, genes, nrows, hStackIdx, y_train, scorer, params , CrossVal, k, averageMode):
+def ExecCumlClassification(nProc, hFit,  st, evaluationMethod, indiv, genes, nrows, hStackIdx, y_train, scorer, params , CrossVal, k, averageMode, 
+CrossAverage):
 
     fit = 0
     if (nProc > indiv):
@@ -528,7 +529,7 @@ def ExecCumlClassification(nProc, hFit,  st, evaluationMethod, indiv, genes, nro
         cY = cp.asarray(y_train, dtype=cp.float64)
 
         if CrossVal:
-            fit, slr =  CrossValidation(slr, cX, cY, scorer, k, averageMode)
+            fit, slr =  CrossValidation(slr, cX, cY, scorer, k, averageMode, CrossAverage)
         else:
             # Procesamos el Fit con el arreglo transformado
             reg = slr.fit(cX, cY)
@@ -568,7 +569,7 @@ def EvaluateCuml2Classification(self, hStack, hStackIdx, hFit, y_train) :
 
     #Ejecuta la evaluacion de CUML de manera secuencial
     for i in range(self.Individuals):
-        hRes = ExecCumlClassification(i, hFit, st, self.evaluationMethod, self.Individuals, self.GenesIndividuals, self.nrowTrain, hStackIdx, y_train, self.scorer, self.params, self.crossVal, self.k, self.averageMode)
+        hRes = ExecCumlClassification(i, hFit, st, self.evaluationMethod, self.Individuals, self.GenesIndividuals, self.nrowTrain, hStackIdx, y_train, self.scorer, self.params, self.crossVal, self.k, self.averageMode, self.CrossAverage)
         
         # Regresa el modelo de CUML del individuo generado (hRes)
         slr2 = copy.deepcopy(hRes)
@@ -599,11 +600,12 @@ def evaluationMetrics(scorer ,y_true, y_pred, averageMode):
         fit = average_precision_score(y_true, y_pred, average = averageMode)
     return fit
 
-def CrossValidation(slr, cX , cY, scorer, k, averageMode):
+def CrossValidation(slr, cX , cY, scorer, k, averageMode, CrossAverage):
         # Load your data into a cuDF dataframe
         X = cudf.DataFrame(cX)  # Your features
         y = cudf.Series(cY)     # Your target variable
-            
+
+        scores = []    
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 0 )
 
@@ -635,25 +637,35 @@ def CrossValidation(slr, cX , cY, scorer, k, averageMode):
             
             # Evaluate the model on the validation fold
             y_pred = make_predictions(slr,scorer,X_val_fold.to_numpy())
+            y_pred_training = make_predictions(slr,scorer,X_val_fold.to_numpy())
             
             if np.isnan(y_pred).any():
                 nan_indices = np.isnan(y_pred)
                 y_pred[nan_indices] = 0
+            if np.isnan(y_pred_training).any():
+                nan_indices = np.isnan(y_pred_training)
+                y_pred[nan_indices] = 0
             score = evaluationMetrics(scorer, y_val_fold.to_numpy(), y_pred, averageMode)
+            scoreTrain = evaluationMetrics(scorer, y_train_fold.to_numpy(), y_pred, averageMode)
 
             if math.isnan(score) or math.isinf(score):
                 score = 0.01
-            
+            print(f"Training fit: {scoreTrain} Validation score: {score}")
             if score > bestCrossScore:
                 bestCrossScore = score
                 bestModel = copy.deepcopy(slr)
+            scores.append(score)
      
         y_test_pred = make_predictions(bestModel, scorer, X_test.to_numpy())
         if np.isnan(y_test_pred).any():
             nan_indices = np.isnan(y_test_pred)
             y_test_pred[nan_indices] = 0
-
-        test_score = evaluationMetrics(scorer, y_test.to_numpy(), y_test_pred, averageMode)
+        
+        if CrossAverage == False:
+            test_score = evaluationMetrics(scorer, y_test.to_numpy(), y_test_pred, averageMode)
+        else:
+            test_score = np.mean(scores)
+            print(f"FinaL score cross validation: {test_score}")
         return test_score, bestModel
 
 
